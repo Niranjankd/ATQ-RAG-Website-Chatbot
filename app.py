@@ -1,3 +1,7 @@
+from dotenv import load_dotenv
+import os
+load_dotenv()
+
 import streamlit as st
 import requests
 from bs4 import BeautifulSoup
@@ -16,6 +20,11 @@ def split_text(text, chunk_size=500):
 
 model = SentenceTransformer("all-MiniLM-L6-v2")
 
+import google.generativeai as genai
+
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+gemini_model = genai.GenerativeModel("gemini-2.0-flash")
+
 client = chromadb.Client()
 
 collection = client.get_or_create_collection(
@@ -31,6 +40,26 @@ st.subheader(
 website_url = st.text_input(
     "Enter Website URL"
 )
+
+question = st.text_input(
+    "ASK a Question"
+)
+
+if st.button("ASK"):
+
+    if question:
+
+        results = collection.query(
+            query_embeddings=[
+                model.encode(question).tolist()
+            ],
+            n_results=1
+        )
+
+        context = results["documents"][0][0]
+
+        st.subheader("Answer")
+        st.write(context)
 
 if st.button("Index Website"):
 
@@ -82,3 +111,4 @@ if st.button("Index Website"):
         st.warning(
             "Please enter a website URL"
         )
+        
