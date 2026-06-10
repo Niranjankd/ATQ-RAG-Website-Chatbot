@@ -1,5 +1,6 @@
 from dotenv import load_dotenv
 import os
+from groq import Groq
 load_dotenv()
 
 import streamlit as st
@@ -20,10 +21,9 @@ def split_text(text, chunk_size=500):
 
 model = SentenceTransformer("all-MiniLM-L6-v2")
 
-import google.generativeai as genai
-
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-gemini_model = genai.GenerativeModel("gemini-2.0-flash")
+client_groq = Groq(
+    api_key=os.getenv("GROQ_API_KEY")
+)
 
 client = chromadb.Client()
 
@@ -58,7 +58,30 @@ if st.button("ASK"):
 
         context = results["documents"][0][0]
 
+        prompt = f"""
+        Answer the question using only the website content below.
+
+        Website Content:
+        {context}
+
+        Question:
+        {question}
+        """
+
+        response = client_groq.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
+        )
+
         st.subheader("Answer")
+        st.write(response.choices[0].message.content)
+
+        st.subheader("Source")
         st.write(context)
 
 if st.button("Index Website"):
