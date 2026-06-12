@@ -50,10 +50,11 @@ with st.sidebar:
 
 website_url = st.text_input(
     "Enter Website URL"
-)
-
+)    
+    
 question = st.text_input(
-    "ASK a Question"
+    "ASK a Question",
+    value=st.session_state.get("selected_question", "")
 )
 
 if st.button("ASK"):
@@ -89,15 +90,18 @@ if st.button("ASK"):
             ]
         )
 
-        st.subheader("Answer")
-        st.write(response.choices[0].message.content)
+        answer = response.choices[0].message.content
+        
+        with st.chat_message("user"):
+            st.write(question)
+
+        with st.chat_message("assistant"):
+            st.write(answer)
         
         st.session_state.chat_history.append({
             "question": question,
-            "answer": response.choices[0].message.content
+            "answer": answer
         })
-
-        st.success(response.choices[0].message.content)
         
         with st.expander("Source Context"):
             st.write(context)
@@ -119,16 +123,27 @@ if st.button("Index Website"):
                 content = soup.get_text()
                 
                 st.session_state.website_content = content
+                st.session_state.indexed_url = website_url
                 
                 chunks = split_text(content)
                 
                 word_count = len(content.split())
                 chunk_count = len(chunks)
                 
-                st.subheader("Website Statistics")
-                st.write(f"Total Words: {word_count}")
-                st.write(f"Total Chunks: {chunk_count}")
-                st.write(f"Indexed URL: {website_url}")
+                st.subheader("Website Dashboard")
+
+                col1, col2, col3 = st.columns(3)
+
+                with col1:
+                    st.metric("Words", word_count)
+
+                with col2:
+                    st.metric("Chunks", chunk_count)
+
+                with col3:
+                    st.metric("URL", "1")
+                    
+                st.info(f"Indexed URL: {website_url}")
                 
                 st.write(f"Created {len(chunks)} chunks")
                 # st.write("Embedding started...")
@@ -145,6 +160,8 @@ if st.button("Index Website"):
                 st.success("Chunks stored in ChromaDB!")
                 
                 st.success("Website scraped successfully!")
+                
+                st.subheader("Suggested Questions")
                                     
                 st.text_area(
                     "Scraped Content",
@@ -162,6 +179,21 @@ if st.button("Index Website"):
         st.warning(
             "Please enter a website URL"
         )
+        
+if "selected_question" not in st.session_state:
+    st.session_state.selected_question = ""
+
+suggested_questions = [
+    "What is this website about?",
+    "What services are offered?",
+    "What are the main features?"
+]
+
+for q in suggested_questions:
+    if st.button(q):
+        st.session_state.selected_question = q
+        st.rerun()
+        
 if st.button("Summarize Website"):
     if "website_content" not in st.session_state:
         st.warning("Please index a website first.")
@@ -185,4 +217,4 @@ if st.button("Summarize Website"):
     )
 
     st.subheader("Website Summary")
-    st.write(summary_response.choices[0].message.content)       
+    st.write(summary_response.choices[0].message.content)
